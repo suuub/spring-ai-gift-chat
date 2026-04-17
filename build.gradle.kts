@@ -2,7 +2,8 @@ plugins {
     kotlin("jvm") version "1.9.25"
     kotlin("plugin.spring") version "1.9.25"
     kotlin("plugin.jpa") version "1.9.25"
-    id("org.springframework.boot") version "3.5.13"
+    id("org.springframework.boot") version "3.5.8"
+//    id("org.springframework.boot") version "3.5.13"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.jlleitschuh.gradle.ktlint") version "14.0.1"
     id("org.flywaydb.flyway") version "12.0.1"
@@ -30,7 +31,10 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.flywaydb:flyway-core")
     implementation("org.flywaydb:flyway-mysql")
-    implementation(platform("org.springframework.ai:spring-ai-bom:1.1.4"))
+    implementation(platform("org.springframework.ai:spring-ai-bom:1.1.2"))
+//    implementation("org.springframework.ai:spring-ai-starter-model-google-genai")
+    implementation("org.springframework.ai:spring-ai-starter-model-openai")
+
     runtimeOnly("com.h2database:h2")
     runtimeOnly("com.mysql:mysql-connector-j")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
