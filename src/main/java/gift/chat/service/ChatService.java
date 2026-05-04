@@ -1,0 +1,77 @@
+package gift.chat.service;
+
+import static java.util.UUID.randomUUID;
+
+import java.time.Duration;
+import java.util.Objects;
+import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.stereotype.Service;
+
+@Service
+public class ChatService {
+
+  private static final Logger log = LoggerFactory.getLogger(ChatService.class);
+  private static final String SYSTEM_PROMPT = """
+      당신은 고객의 취향에 맞는 선물을 추천하는 선물 추천 전문가입니다.
+      고객이 선물 추천과 관련된 질문을 하면, 고객의 취향과 요구사항을 파악하여 적절한 선물을 추천해 주세요.
+      만약, 고객이 선물 추천과 관련 없는 질문을 한다면, "너 아주 못된 아이구나"라고 답변해 주세요.
+      """;
+  private static final String FALLBACK_MESSAGE = "지금은 선물 추천을 준비 중입니다. 잠시 후 다시 시도해 주세요.";
+  private final ChatClient chatClient;
+
+  public ChatService(ChatClient.Builder builder) {
+    this.chatClient = builder.build();
+  }
+
+  public MessageRequest sendMessage(UUID sessionId, String message) {
+    UUID requestId = randomUUID();
+    long startTime = System.nanoTime();
+
+    try {
+      var response = chatClient.prompt()
+          .system(SYSTEM_PROMPT)
+          .user(message)
+          .call()
+          .chatResponse();
+      return createResponse(sessionId, requestId, Objects.requireNonNull(response), startTime);
+    } catch (RuntimeException exception) {
+      return createErrorResponse(sessionId, requestId, startTime);
+    }
+  }
+
+  private MessageRequest createResponse(
+      UUID sessionId,
+      UUID requestId,
+      ChatResponse response,
+      long startTime
+  ) {
+    long durationMs = Duration.ofNanos(System.nanoTime() - startTime).toMillis();
+    log.info(
+        "requestId={}, sessionId={}, token={}, durationMs={}",
+        requestId,
+        sessionId,
+        response.getMetadata().getUsage().getTotalTokens(),
+        durationMs
+    );
+    return new MessageRequest(requestId, response.getResult().getOutput().getText(), durationMs);
+  }
+
+  private MessageRequest createErrorResponse(
+      UUID sessionId,
+      UUID requestId,
+      long startTime
+  ) {
+    long durationMs = Duration.ofNanos(System.nanoTime() - startTime).toMillis();
+    log.error(
+        "requestId={}, sessionId={}, durationMs={}",
+        requestId,
+        sessionId,
+        durationMs
+    );
+    return new MessageRequest(requestId, FALLBACK_MESSAGE, durationMs);
+  }
+}
